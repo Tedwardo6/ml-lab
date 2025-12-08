@@ -22,9 +22,5 @@ def sort():
         swap_count = 0
         num_passes += 1
 
-    print(num_passes)
 
-print(unsorted)
-print("Worst case:", len(unsorted) - 1)
-sort()
-print(unsorted)
+
