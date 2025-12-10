@@ -28,9 +28,12 @@ class Tensor:
             grad_to_x = 0
             grad_to_y = 0
             grad_to_x += self.grad * y.value    
-            grad_to_y += self.grad * x.value   #error propogating duplicated objects, dont use self.grad for contributions just for storage
-            x.backward(grad_to_x)
-            y.backward(grad_to_y)
+            grad_to_y += self.grad * x.value
+            if x == y:
+                x.backward(grad_to_x)
+            else:
+                x.backward(grad_to_x)
+                y.backward(grad_to_y)
         elif self.op == "add":
             x = self.parents[0]
             y = self.parents[1]
@@ -38,21 +41,27 @@ class Tensor:
             grad_to_y = 0     
             grad_to_x += self.grad
             grad_to_y += self.grad
-            x.backward(grad_to_x)
-            y.backward(grad_to_y)
+            if x == y:
+                x.backward(grad_to_x*2)
+            else:
+                x.backward(grad_to_x)
+                y.backward(grad_to_y)
         elif self.op == None:
             return
 
 x = Tensor(2.0)
 y = Tensor(3.0)
-k = Tensor(5.0)
+k = Tensor(7.0)
 
 z = x.add(y)
-g = z.mul(z)
+g = k.mul(x)
+f = z.mul(g)
+R = f.add(f)
 
+R.backward(1)
 
-g.backward(1)
-
-print(g)
+print(R)
+print(R.parents)
+print(f.parents)
 print(g.parents)
 print(z.parents)
