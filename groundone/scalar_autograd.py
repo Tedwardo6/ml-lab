@@ -20,48 +20,50 @@ class Tensor:
         par = [self,other]
         return Tensor(temp,grad_place,par,"mul")
 
-    def backward(self,upstream): #pass 1 into final.backward(1)
+#if Tensor has op --> it is a node
+#for two paths, each node stores two grads, one for each parent
+#the total grad for the ancestor tensors is given by multiplying e
+#finish path 1 --> raise flag --> add future grad to past
+    def backward(self,upstream=1.0): #pass 1 into final.backward(1)   
         self.grad += upstream
         if self.op == "mul":
-            x = self.parents[0]
-            y = self.parents[1]
-            grad_to_x = 0
-            grad_to_y = 0
-            grad_to_x += self.grad * y.value    
-            grad_to_y += self.grad * x.value
-            if x == y:
-                x.backward(grad_to_x)
-            else:
-                x.backward(grad_to_x)
-                y.backward(grad_to_y)
+            t1 = self.parents[0]
+            t2 = self.parents[1]
+            grad_to_t1 = t2.value * upstream
+            grad_to_t2 = t1.value * upstream
+            t1.backward(grad_to_t1)
+            t2.backward(grad_to_t2)
         elif self.op == "add":
-            x = self.parents[0]
-            y = self.parents[1]
-            grad_to_x = 0
-            grad_to_y = 0     
-            grad_to_x += self.grad
-            grad_to_y += self.grad
-            if x == y:
-                x.backward(grad_to_x*2)
-            else:
-                x.backward(grad_to_x)
-                y.backward(grad_to_y)
+            t1 = self.parents[0]
+            t2 = self.parents[1]
+            grad_to_t1 = 1 * upstream
+            grad_to_t2 = 1 * upstream
+            t1.backward(grad_to_t1)
+            t2.backward(grad_to_t2)
         elif self.op == None:
             return
 
+def zero_grads(*tensors):
+    for t in tensors:
+        t.grad = 0.0
+
+print("=== TEST ===")
 x = Tensor(2.0)
 y = Tensor(3.0)
-k = Tensor(7.0)
+z = Tensor(7.0)
 
-z = x.add(y)
-g = k.mul(x)
-f = z.mul(g)
-R = f.add(f)
+k = x.add(y)        # a = x*y
+g = k.mul(z)        # b = z^2  (dead branch, not used)
+f = g.mul(g)        # L = x*y + x
 
-R.backward(1)
+zero_grads(x, y, z, k, g, f)
+f.backward()
 
-print(R)
-print(R.parents)
-print(f.parents)
-print(g.parents)
-print(z.parents)
+# dL/dx = y + 1 = 4
+# dL/dy = x     = 2
+# dL/dz = 0, because b is not connected to L
+print("x.grad (expected):", x.grad)
+print("y.grad (expected):", y.grad)
+print("z.grad (expected):", z.grad)
+print("b.grad (expected):", k.grad)
+print()
